@@ -7,11 +7,14 @@ import pymorphy2  # морфологический анализатор https://
 
 morph = pymorphy2.MorphAnalyzer()
 
-def lemmatize(word_tokens):
+
+def lemmatize_and_clean(word_tokens):
     res = list()
     for token in word_tokens:
         p = morph.parse(token)[0]
-        res.append(p.normal_form)
+        # исключаем глаголы, наречия и союзы
+        if p.tag.POS != 'VERB' and p.tag.POS != 'INFN' and p.tag.POS != 'ADVB' and p.tag.POS != 'CONJ':
+            res.append(p.normal_form)
     return res
 
 
@@ -36,7 +39,7 @@ if __name__ == '__main__':
     word_tokens = word_tokenize(text, 'russian')
 
     # лемматизация
-    word_tokens = lemmatize(word_tokens)
+    word_tokens = lemmatize_and_clean(word_tokens)
 
     # очистка текста
     rus_stopwords = stopwords.words('russian')
