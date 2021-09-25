@@ -35,13 +35,13 @@ if __name__ == '__main__':
 
     word_tokens = word_tokenize(text, 'russian')
 
+    # лемматизация
+    word_tokens = lemmatize(word_tokens)
+
     # очистка текста
     rus_stopwords = stopwords.words('russian')
     rus_stopwords += []  # при необходимости добавить доп слова не несущие смысловой нагрузки
     word_tokens = [token for token in word_tokens if token not in rus_stopwords]
-
-    # лемматизация
-    word_tokens = lemmatize(word_tokens)
 
     # результат
     nltk_text = nltk.Text(word_tokens)
