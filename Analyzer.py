@@ -1,6 +1,7 @@
 import string
 import nltk
 import os
+import re
 from nltk import word_tokenize
 from nltk.probability import FreqDist
 from nltk.corpus import stopwords
@@ -14,26 +15,33 @@ def lemmatize_and_clean(word_tokens):
     for token in word_tokens:
         p = morph.parse(token)[0]
         pos = p.tag.POS
-        # Пропускаем только необходимые части речи -
-        # if p.tag.POS != 'VERB' and p.tag.POS != 'INFN' and p.tag.POS != 'ADVB' and p.tag.POS != 'CONJ':
-        #     res.append(p.normal_form)
-        # print(f'Word: {p.word}, pos: {pos}\n')
+        # Пропускаем только необходимые части речи - существительные, прилагательные
         # TODO надо ли убрирать местоименные прилагательные/существительные? (который, свой и т.д.)
-        #      > почему-то пропускает мг (единицы измерения)
-        if pos == 'NOUN' or pos == 'ADJF' or pos == 'ADJS':
+        if (pos == 'NOUN' or pos == 'ADJF' or pos == 'ADJS') and len(p.word) > 1:
             res.append(p.normal_form)
     return res
 
 
-def remove_punctuation(text):
-    punctuation = string.punctuation + '\n\t\xa0«»-—…'
+def remove_unnecessary_symbols(text):
+    punctuation = """!"#$%&'()*+,./:;<=>?@[\]^_`{|}~""" + '\n\t\xa0'
     return "".join([char for char in text if char not in punctuation])
+
+
+def remove_units(text):
+    file = open('resources/dicts/units.txt', "r", encoding="utf-8")
+    dict_tokens = word_tokenize(file.read(), 'russian')
+    file.close()
+    for token in dict_tokens:
+        text = re.sub(r'\s+' + token + r'(\s+|\.|,|\(|\))', ' ', text)
+    return text
+
 
 # слова
 def words_processing(text):
     # препроцессинг
     text = text.lower()
-    text = remove_punctuation(text)
+    text = remove_unnecessary_symbols(text)
+    text = remove_units(text)
 
     word_tokens = word_tokenize(text, 'russian')
 
@@ -50,8 +58,8 @@ def words_processing(text):
     freq_dist = FreqDist(nltk_text)  # распределение частот
     print('Most common words:')
     for word in freq_dist.most_common(15):
-        print(word)
-
+        if (word[1] > 1):
+            print('\t', word, morph.parse(word[0])[0].tag.POS)
 
 
 # Определения
@@ -59,10 +67,64 @@ def definition_processing(text):
     print('def processing not implemented')
 
 
-
 # Словосочетания
 def collocation_processing(text):
-    print('coll processing not implemented')
+    # препроцессинг
+    text = text.lower()
+    text = remove_units(text)
+
+    word_tokens = word_tokenize(text, 'russian')
+
+    # TODO словосочетания, вынести в метод
+    #  ADJF + NOUN
+    #  NOUN + NOUN
+    #  NUMR + NOUN
+    #  VERB\INFN + NOUN
+    #  VERB\INFN + ADVB\GRND
+    #  GRND + NOUN/ADVB
+    #  PRTF/PRTS + зависимое слово?
+    collocations_tokens = list()
+    i = 0
+    while i < (len(word_tokens) - 1):
+        p1 = morph.parse(word_tokens[i])[0]
+        pos1 = p1.tag.POS
+        p2 = morph.parse(word_tokens[i+1])[0]
+        pos2 = p2.tag.POS
+
+        if (
+                (pos1 == 'ADJF' and pos2 == 'NOUN') or
+                (pos1 == 'NOUN' and pos2 == 'NOUN') or
+                (pos1 == 'NUMR' and pos2 == 'NOUN') or
+                (pos1 == 'VERB' and pos2 == 'NOUN') or
+                (pos1 == 'INFN' and pos2 == 'NOUN') or
+                (pos1 == 'VERB' and pos2 == 'ADVB') or
+                (pos1 == 'INFN' and pos2 == 'ADVB') or
+                (pos1 == 'VERB' and pos2 == 'GRND') or
+                (pos1 == 'INFN' and pos2 == 'GRND') or
+                (pos1 == 'GRND' and pos2 == 'NOUN') or
+                (pos1 == 'GRND' and pos2 == 'ADVB')
+        ) and len(p1.word) > 1 and len(p2.word) > 1:
+            # TODO проблемы:
+            #      может быть 3 слова
+            #      привести к удобоваримому виду в плане падежа/числа (как минимум)
+            #      возможно надо найти сначала главное и зависимое слово
+            collocations_tokens.append(p1.word + ' ' + p2.word)
+        i = i + 1
+
+    # очистка текста
+    rus_stopwords = stopwords.words('russian')
+    rus_stopwords += []  # при необходимости добавить доп слова не несущие смысловой нагрузки
+    collocations_tokens = [token for token in collocations_tokens if token not in rus_stopwords]
+
+    # результат
+    nltk_text = nltk.Text(collocations_tokens)
+    freq_dist = FreqDist(nltk_text)  # распределение частот
+    print('Most common collocations:')
+    for word in freq_dist.most_common(15):
+        if (word[1] > 1):
+            print('\t', word, morph.parse(word[0])[0].tag.POS)
+
+
 
 if __name__ == '__main__':
     nltk.download('punkt')
