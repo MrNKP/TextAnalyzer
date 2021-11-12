@@ -65,7 +65,27 @@ def words_processing(text):
 # Определения
 def definition_processing(text):
     print('def processing not implemented')
-
+    punctuation = """!"#$%&'()*+,./:;<=>?@[\]^_`{|}~"""
+    text = text.lower()
+    text = remove_units(text)
+    word_tokens = word_tokenize(text, 'russian')
+    definitions = list()
+    position = 0
+    lastPunctuationToken = 0
+    for token in word_tokens:
+        if token in punctuation and token != '—':
+            lastPunctuationToken = position
+        if (token == '—' or token == 'это') and (position != lastPunctuationToken + 1 or lastPunctuationToken == 0):
+            localDefinition = ''
+            for i in range(0 if lastPunctuationToken == 0 else 1, position - lastPunctuationToken):
+                localDefinition += word_tokens[lastPunctuationToken + i]
+                if i != position - lastPunctuationToken - 1:
+                    localDefinition += ' '
+            definitions.append(localDefinition)
+        position += 1
+    print('All found definitions : ')
+    for definition in definitions:
+        print(definition)
 
 # Словосочетания
 def collocation_processing(text):
