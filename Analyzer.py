@@ -9,6 +9,10 @@ import pymorphy2  # морфологический анализатор https://
 
 morph = pymorphy2.MorphAnalyzer()
 
+BOLD = '\033[1m'
+GREEN = '\033[32m'
+YELLOW = '\033[33m'
+END = '\033[0m'
 
 def lemmatize_and_clean(word_tokens):
     res = list()
@@ -56,7 +60,7 @@ def words_processing(text):
     # результат
     nltk_text = nltk.Text(word_tokens)
     freq_dist = FreqDist(nltk_text)  # распределение частот
-    print('Most common words:')
+    print(GREEN + BOLD + 'Most common words:' + END)
     for word in freq_dist.most_common(15):
         if (word[1] > 1):
             print('\t', word, morph.parse(word[0])[0].tag.POS)
@@ -64,7 +68,6 @@ def words_processing(text):
 
 # Определения
 def definition_processing(text):
-    print('def processing not implemented')
     punctuation = """!"#$%&'()*+,./:;<=>?@[\]^_`{|}~"""
     text = text.lower()
     text = remove_units(text)
@@ -83,9 +86,9 @@ def definition_processing(text):
                     localDefinition += ' '
             definitions.append(localDefinition)
         position += 1
-    print('All found definitions : ')
+    print(GREEN + BOLD + 'Definitions: ' + END)
     for definition in definitions:
-        print(definition)
+        print('\t', definition)
 
 # Словосочетания
 def collocation_processing(text):
@@ -139,7 +142,7 @@ def collocation_processing(text):
     # результат
     nltk_text = nltk.Text(collocations_tokens)
     freq_dist = FreqDist(nltk_text)  # распределение частот
-    print('Most common collocations:')
+    print(GREEN + BOLD + 'Most common collocations:' + END)
     for word in freq_dist.most_common(15):
         if (word[1] > 1):
             print('\t', word, morph.parse(word[0])[0].tag.POS)
@@ -156,15 +159,15 @@ if __name__ == '__main__':
             file = open('resources/' + filename, "r", encoding="utf-8")
             text = file.read()
             file.close()
-            print(f'Filename = {filename}')
-            print(f'First 80 symbols = {text[:80]}...')
-            print(f'Characters count = {len(text)}')
+            print(f'{GREEN + BOLD}Filename{ END } = {filename}')
+            print(f'{GREEN + BOLD}First 80 symbols{ END } = {text[:80]}...')
+            print(f'{GREEN + BOLD}Characters count{ END } = {len(text)}')
 
             words_processing(text)
             definition_processing(text)
             collocation_processing(text)
 
-            print('==============================\n\n')
+            print(YELLOW + BOLD + '============================================================\n\n' + END)
             # break
             continue
         else:
