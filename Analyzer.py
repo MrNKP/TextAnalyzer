@@ -2,7 +2,7 @@ import string
 import nltk
 import os
 import re
-from nltk import word_tokenize
+from nltk import word_tokenize, BigramCollocationFinder
 from nltk.probability import FreqDist
 from nltk.corpus import stopwords
 import pymorphy2  # морфологический анализатор https://pymorphy2.readthedocs.io/en/latest/user/index.html
@@ -83,33 +83,40 @@ def collocation_processing(text):
     #  VERB\INFN + ADVB\GRND
     #  GRND + NOUN/ADVB
     #  PRTF/PRTS + зависимое слово?
-    collocations_tokens = list()
-    i = 0
-    while i < (len(word_tokens) - 1):
-        p1 = morph.parse(word_tokens[i])[0]
-        pos1 = p1.tag.POS
-        p2 = morph.parse(word_tokens[i+1])[0]
-        pos2 = p2.tag.POS
+    # collocations_tokens = list()
+    # i = 0
+    # while i < (len(word_tokens) - 1):
+    #     p1 = morph.parse(word_tokens[i])[0]
+    #     pos1 = p1.tag.POS
+    #     p2 = morph.parse(word_tokens[i+1])[0]
+    #     pos2 = p2.tag.POS
+    #
+    #     if (
+    #             (pos1 == 'ADJF' and pos2 == 'NOUN') or
+    #             (pos1 == 'NOUN' and pos2 == 'NOUN') or
+    #             (pos1 == 'NUMR' and pos2 == 'NOUN') or
+    #             (pos1 == 'VERB' and pos2 == 'NOUN') or
+    #             (pos1 == 'INFN' and pos2 == 'NOUN') or
+    #             (pos1 == 'VERB' and pos2 == 'ADVB') or
+    #             (pos1 == 'INFN' and pos2 == 'ADVB') or
+    #             (pos1 == 'VERB' and pos2 == 'GRND') or
+    #             (pos1 == 'INFN' and pos2 == 'GRND') or
+    #             (pos1 == 'GRND' and pos2 == 'NOUN') or
+    #             (pos1 == 'GRND' and pos2 == 'ADVB')
+    #     ) and len(p1.word) > 1 and len(p2.word) > 1:
+    #         # TODO проблемы:
+    #         #      может быть 3 слова
+    #         #      привести к удобоваримому виду в плане падежа/числа (как минимум)
+    #         #      возможно надо найти сначала главное и зависимое слово
+    #         collocations_tokens.append(p1.word + ' ' + p2.word)
+    #     i = i + 1
 
-        if (
-                (pos1 == 'ADJF' and pos2 == 'NOUN') or
-                (pos1 == 'NOUN' and pos2 == 'NOUN') or
-                (pos1 == 'NUMR' and pos2 == 'NOUN') or
-                (pos1 == 'VERB' and pos2 == 'NOUN') or
-                (pos1 == 'INFN' and pos2 == 'NOUN') or
-                (pos1 == 'VERB' and pos2 == 'ADVB') or
-                (pos1 == 'INFN' and pos2 == 'ADVB') or
-                (pos1 == 'VERB' and pos2 == 'GRND') or
-                (pos1 == 'INFN' and pos2 == 'GRND') or
-                (pos1 == 'GRND' and pos2 == 'NOUN') or
-                (pos1 == 'GRND' and pos2 == 'ADVB')
-        ) and len(p1.word) > 1 and len(p2.word) > 1:
-            # TODO проблемы:
-            #      может быть 3 слова
-            #      привести к удобоваримому виду в плане падежа/числа (как минимум)
-            #      возможно надо найти сначала главное и зависимое слово
-            collocations_tokens.append(p1.word + ' ' + p2.word)
-        i = i + 1
+
+    bm = nltk.collocations.BigramAssocMeasures()
+    f = BigramCollocationFinder.from_words(word_tokens)
+    f.apply_freq_filter(1)
+    collocations_tokens = [''.join(i) for i in f.nbest(bm.pmi, 15)]
+
 
     # очистка текста
     rus_stopwords = stopwords.words('russian')
