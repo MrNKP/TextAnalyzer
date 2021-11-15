@@ -70,21 +70,30 @@ def words_processing(text):
 def definition_processing(text):
     punctuation = """!"#$%&'()*+,./:;<=>?@[\]^_`{|}~"""
     text = text.lower()
-    text = remove_units(text)
+    # text = remove_units(text)
+    for char in punctuation:
+        text = text.replace(char, char + ' ', text.count(char))
     word_tokens = word_tokenize(text, 'russian')
     definitions = list()
     position = 0
-    lastPunctuationToken = 0
+    previousEndSentence = 0
+    nextEndSentence = 0
+    definitionPosition = 0
     for token in word_tokens:
-        if token in punctuation and token != '—':
-            lastPunctuationToken = position
-        if (token == '—' or token == 'это') and (position != lastPunctuationToken + 1 or lastPunctuationToken == 0):
-            localDefinition = ''
-            for i in range(0 if lastPunctuationToken == 0 else 1, position - lastPunctuationToken):
-                localDefinition += word_tokens[lastPunctuationToken + i]
-                if i != position - lastPunctuationToken - 1:
-                    localDefinition += ' '
-            definitions.append(localDefinition)
+        if token == '.':
+            previousEndSentence = nextEndSentence
+            nextEndSentence = position
+            # if (definitionPosition < nextEndSentence and definitionPosition > previousEndSentence):
+            if (definitionPosition in range(previousEndSentence + 1, nextEndSentence)):
+                localDefinition = ''
+                for i in range(previousEndSentence if previousEndSentence == 0 else previousEndSentence + 1, nextEndSentence):
+                    localDefinition += word_tokens[i]
+                    if i != nextEndSentence - 1:
+                        localDefinition += ' '
+                definitions.append(localDefinition)
+        else:
+            if (token == '—') and (position != 0 and (word_tokens[position-1] not in punctuation)):
+                definitionPosition = position
         position += 1
     print(GREEN + BOLD + 'Definitions: ' + END)
     for definition in definitions:
