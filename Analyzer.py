@@ -20,7 +20,6 @@ def lemmatize_and_clean(word_tokens):
         p = morph.parse(token)[0]
         pos = p.tag.POS
         # Пропускаем только необходимые части речи - существительные, прилагательные
-        # TODO надо ли убрирать местоименные прилагательные/существительные? (который, свой и т.д.)
         if (pos == 'NOUN' or pos == 'ADJF' or pos == 'ADJS') and len(p.word) > 1:
             res.append(p.normal_form)
     return res
@@ -39,6 +38,12 @@ def remove_units(text):
         text = re.sub(r'\s+' + token + r'(\s+|\.|,|\(|\))', ' ', text)
     return text
 
+def read_exclude_dict():
+    file = open('resources/dicts/exclude.txt', "r", encoding="utf-8")
+    dict_tokens = word_tokenize(file.read(), 'russian')
+    file.close()
+    return dict_tokens
+
 
 # слова
 def words_processing(text):
@@ -54,7 +59,7 @@ def words_processing(text):
 
     # очистка текста
     rus_stopwords = stopwords.words('russian')
-    rus_stopwords += []  # при необходимости добавить доп слова не несущие смысловой нагрузки
+    rus_stopwords += read_exclude_dict()  # при необходимости добавить доп слова не несущие смысловой нагрузки
     word_tokens = [token for token in word_tokens if token not in rus_stopwords]
 
     # результат
@@ -107,11 +112,16 @@ def collocation_processing(text):
 
     word_tokens = word_tokenize(text, 'russian')
 
-    # TODO словосочетания, вынести в метод
-    #  ADJF + NOUN
+    # TODO вынести в метод
+    #   базовыми словосочетаниями считаем сущ + прил и глаг + суш
+    #   два слова подряд нельзя в словосочетании
+    #   для приведения в норм форму - определяем род,число сущ -> приводим к нему прилаг (род, число) или глаг (род) с помощью morphy2
+    #  ADJF + NOUN <
+    #  VERB\INFN + NOUN <
+
+    # доп виды
     #  NOUN + NOUN
     #  NUMR + NOUN
-    #  VERB\INFN + NOUN
     #  VERB\INFN + ADVB\GRND
     #  GRND + NOUN/ADVB
     #  PRTF/PRTS + зависимое слово?
@@ -136,10 +146,6 @@ def collocation_processing(text):
                 (pos1 == 'GRND' and pos2 == 'NOUN') or
                 (pos1 == 'GRND' and pos2 == 'ADVB')
         ) and len(p1.word) > 1 and len(p2.word) > 1:
-            # TODO проблемы:
-            #      может быть 3 слова
-            #      привести к удобоваримому виду в плане падежа/числа (как минимум)
-            #      возможно надо найти сначала главное и зависимое слово
             collocations_tokens.append(p1.word + ' ' + p2.word)
         i = i + 1
 
