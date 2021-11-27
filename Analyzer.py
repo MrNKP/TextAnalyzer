@@ -73,9 +73,12 @@ def words_processing(text):
 
 # Определения
 def definition_processing(text):
-    punctuation = """!"#$%&'()*+,./:;<=>?@[\]^_`{|}~"""
+    # punctuation = """!"#$%&'()*+,./:;<=>?@[\]^_`{|}~«»"""
+    punctuation = """!"#$%&'*+,./:;<=>?@[\]^_`{|}~«»"""
     text = text.lower()
     # text = remove_units(text)
+    text = text.replace('—', '—' + ' ', text.count('—'))
+    text = text.replace('–', '–' + ' ', text.count('–'))
     for char in punctuation:
         text = text.replace(char, char + ' ', text.count(char))
     word_tokens = word_tokenize(text, 'russian')
@@ -89,7 +92,7 @@ def definition_processing(text):
             previousEndSentence = nextEndSentence
             nextEndSentence = position
             # if (definitionPosition < nextEndSentence and definitionPosition > previousEndSentence):
-            if (definitionPosition in range(previousEndSentence + 1, nextEndSentence)):
+            if (definitionPosition in range(previousEndSentence + 1, nextEndSentence) and (nextEndSentence - previousEndSentence < 40)):
                 localDefinition = ''
                 for i in range(previousEndSentence if previousEndSentence == 0 else previousEndSentence + 1, nextEndSentence):
                     localDefinition += word_tokens[i]
@@ -97,7 +100,10 @@ def definition_processing(text):
                         localDefinition += ' '
                 definitions.append(localDefinition)
         else:
-            if (token == '—') and (position != 0 and (word_tokens[position-1] not in punctuation)):
+            condition1 = (token == '—' or token == '–' or token == 'это' or token == 'понимается')
+            condition2 = position != 0 and position != previousEndSentence + 1
+            condition3 = word_tokens[position-1] not in punctuation if condition2 else False
+            if condition1 and condition2 and condition3:
                 definitionPosition = position
         position += 1
     print(GREEN + BOLD + 'Definitions: ' + END)
