@@ -132,11 +132,12 @@ def parse_and_inflect_collocations(word_tokens):
                 (pos1 == 'NOUN' and pos2 == 'VERB') or
                 (pos1 == 'NOUN' and pos2 == 'INFN')
         ) and p1.normal_form != p2.normal_form and len(p1.word) > 1 and len(p2.word) > 1:
+            # TODO добавить словарик для слов типа "которая"
             if pos1 == 'NOUN':  # определяем положение сущ
                 p1_normal = morph.parse(p1.normal_form)[0]
                 gender1 = p1_normal.tag.gender  # род
                 number1 = p1_normal.tag.number  # число
-                case1 = p1_normal.tag.case  # падеж
+                case1 = 'nomn' #p1_normal.tag.case  # падеж
                 if pos2 == 'ADJF':
                     (word2, error) = try_inflect_word(p2, gender1, number1, case1)
                     collocations_tokens.append((p1.word if error else p1_normal.word) + ' ' + word2)
@@ -146,7 +147,7 @@ def parse_and_inflect_collocations(word_tokens):
                 p2_normal = morph.parse(p2.normal_form)[0]
                 gender2 = p2_normal.tag.gender
                 number2 = p2_normal.tag.number
-                case2 = p2_normal.tag.case
+                case2 = 'nomn' # p2_normal.tag.case
                 if pos1 == 'ADJF':
                     (word1, error) = try_inflect_word(p1, gender2, number2, case2)
                     collocations_tokens.append(word1 + ' ' + (p2.word if error else p2_normal.word))
@@ -157,18 +158,10 @@ def parse_and_inflect_collocations(word_tokens):
 
 
 def try_inflect_word(parse, gender, number, case):
-    if gender is not None:
-        parse = parse.inflect({gender})
-    if number is not None:
-        parse = parse.inflect({number})
-    if case is not None:
-        parse = parse.inflect({case})
-
-    return parse.word, False
-    # if gender is None or number is None or case is None or parse.inflect({gender, number, case}) is None:
-    #     return parse.word, True
-    # else:
-    #     return parse.inflect({gender, number, case}).word, False
+    if gender is None or number is None or case is None or parse.inflect({gender, number, case}) is None:
+        return parse.word, True
+    else:
+        return parse.inflect({gender, number, case}).word, False
 
 
 # Словосочетания
