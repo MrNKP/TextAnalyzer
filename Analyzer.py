@@ -78,8 +78,8 @@ def words_processing(text):
 
 # Определения
 def definition_processing(text):
-    # punctuation = """!"#$%&'()*+,./:;<=>?@[\]^_`{|}~«»"""
-    punctuation = """!"#$%&'*+,./:;<=>?@[\]^_`{|}~«»"""
+    punctuation = """!"#$%&'()*+,./:;<=>?@[\]^_`{|}~«»"""
+    # punctuation = """!"#$%&'*+,./:;<=>?@[\]^_`{|}~«»"""
     text = text.lower()
     # text = remove_units(text)
     text = text.replace('—', '—' + ' ', text.count('—'))
@@ -89,28 +89,29 @@ def definition_processing(text):
     word_tokens = word_tokenize(text, 'russian')
     definitions = list()
     position = 0
-    previousEndSentence = 0
-    nextEndSentence = 0
-    definitionPosition = 0
+    sentencesPositions = []
+    sentencesPositions.append(-1)
     for token in word_tokens:
         if token == '.':
-            previousEndSentence = nextEndSentence
-            nextEndSentence = position
-            # if (definitionPosition < nextEndSentence and definitionPosition > previousEndSentence):
-            if (definitionPosition in range(previousEndSentence + 1, nextEndSentence) and (nextEndSentence - previousEndSentence < 40)):
+            sentencesPositions.append(position)
+        position += 1
+    sentencesCount = len(sentencesPositions)
+    # print(f'sentencesCount = {sentencesCount}')
+    for i in range(0, sentencesCount-1):
+        # print(f'{i}/{sentencesCount}')
+        for pos in range(sentencesPositions[i]+1, sentencesPositions[i+1]):
+            localToken = word_tokens[pos]
+            type1Condition = ((localToken == '—' or localToken == '–') and (word_tokens[pos-1] not in punctuation)) if pos != sentencesPositions[i]+1 else False
+            type2Condition = (localToken == 'это' and (word_tokens[pos-1] == '—' or word_tokens[pos-1] == '–')) if pos != sentencesPositions[i]+1 else False
+            type3Condition = (localToken == 'понимается' and (word_tokens[pos-2] == 'под' or word_tokens[pos-3] == 'под')) if pos != sentencesPositions[i]+3 else False
+            if type1Condition or type2Condition or type3Condition:
                 localDefinition = ''
-                for i in range(previousEndSentence if previousEndSentence == 0 else previousEndSentence + 1, nextEndSentence):
-                    localDefinition += word_tokens[i]
-                    if i != nextEndSentence - 1:
+                for index in range(sentencesPositions[i]+1, sentencesPositions[i+1]):
+                    localDefinition += word_tokens[index]
+                    if index != sentencesPositions[i+1] - 1:
                         localDefinition += ' '
                 definitions.append(localDefinition)
-        else:
-            condition1 = (token == '—' or token == '–' or token == 'это' or token == 'понимается')
-            condition2 = position != 0 and position != previousEndSentence + 1
-            condition3 = word_tokens[position-1] not in punctuation if condition2 else False
-            if condition1 and condition2 and condition3:
-                definitionPosition = position
-        position += 1
+                break
     print(GREEN + BOLD + 'Definitions: ' + END)
     for definition in definitions:
         print('\t>>> ', definition)
