@@ -38,11 +38,18 @@ def remove_units(text):
         text = re.sub(r'\s+' + token + r'(\s+|\.|,|\(|\))', ' ', text)
     return text
 
-def read_exclude_dict():
-    file = open('resources/dicts/exclude.txt', "r", encoding="utf-8")
+def read_exclude_dict(filename):
+    file = open('resources/dicts/' + filename, "r", encoding="utf-8")
     dict_tokens = word_tokenize(file.read(), 'russian')
     file.close()
     return dict_tokens
+
+
+# очистка текста от ненужных слов
+def remove_stopwords(word_tokens):
+    rus_stopwords = stopwords.words('russian')
+    rus_stopwords += read_exclude_dict('exclude_from_collocations.txt')
+    return [token for token in word_tokens if token not in rus_stopwords]
 
 
 # слова
@@ -58,9 +65,7 @@ def words_processing(text):
     word_tokens = lemmatize_and_clean(word_tokens)
 
     # очистка текста
-    rus_stopwords = stopwords.words('russian')
-    rus_stopwords += read_exclude_dict()  # при необходимости добавить доп слова не несущие смысловой нагрузки
-    word_tokens = [token for token in word_tokens if token not in rus_stopwords]
+    word_tokens = remove_stopwords(word_tokens)
 
     # результат
     nltk_text = nltk.Text(word_tokens)
@@ -121,6 +126,8 @@ def parse_and_inflect_collocations(word_tokens):
         p2 = morph.parse(word_tokens[i + 1])[0]
         pos2 = p2.tag.POS
 
+        exclude_words = read_exclude_dict('exclude_from_collocations.txt')
+
         if (
                 # сущ + прил
                 (pos1 == 'ADJF' and pos2 == 'NOUN') or
@@ -131,22 +138,22 @@ def parse_and_inflect_collocations(word_tokens):
                 (pos1 == 'INFN' and pos2 == 'NOUN') or
                 (pos1 == 'NOUN' and pos2 == 'VERB') or
                 (pos1 == 'NOUN' and pos2 == 'INFN')
-        ) and p1.normal_form != p2.normal_form and len(p1.word) > 1 and len(p2.word) > 1:
+        ) and p1.normal_form != p2.normal_form and len(p1.word) > 1 and len(p2.word) > 1 and (p1.normal_form not in exclude_words) and (p2.normal_form not in exclude_words):
             if pos1 == 'NOUN':  # определяем положение сущ
                 p1_normal = morph.parse(p1.normal_form)[0]
                 gender1 = p1_normal.tag.gender  # род
                 number1 = p1_normal.tag.number  # число
-                case1 = p1_normal.tag.case  # падеж
+                case1 = 'nomn'  # падеж
                 if pos2 == 'ADJF':
                     (word2, error) = try_inflect_word(p2, gender1, number1, case1)
-                    collocations_tokens.append((p1.word if error else p1_normal.word) + ' ' + word2)
+                    collocations_tokens.append(word2 + ' ' + (p1.word if error else p1_normal.word))
                 # else:
                 #     collocations_tokens.append(p1.word + ' ' + try_inflect_word(p2, gender1, number1, case1)[0])
             else:
                 p2_normal = morph.parse(p2.normal_form)[0]
                 gender2 = p2_normal.tag.gender
                 number2 = p2_normal.tag.number
-                case2 = p2_normal.tag.case
+                case2 = 'nomn'
                 if pos1 == 'ADJF':
                     (word1, error) = try_inflect_word(p1, gender2, number2, case2)
                     collocations_tokens.append(word1 + ' ' + (p2.word if error else p2_normal.word))
@@ -157,18 +164,10 @@ def parse_and_inflect_collocations(word_tokens):
 
 
 def try_inflect_word(parse, gender, number, case):
-    if gender is not None:
-        parse = parse.inflect({gender})
-    if number is not None:
-        parse = parse.inflect({number})
-    if case is not None:
-        parse = parse.inflect({case})
-
-    return parse.word, False
-    # if gender is None or number is None or case is None or parse.inflect({gender, number, case}) is None:
-    #     return parse.word, True
-    # else:
-    #     return parse.inflect({gender, number, case}).word, False
+    if gender is None or number is None or case is None or parse.inflect({gender, number, case}) is None:
+        return parse.word, True
+    else:
+        return parse.inflect({gender, number, case}).word, False
 
 
 # Словосочетания
