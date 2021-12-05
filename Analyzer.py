@@ -143,7 +143,7 @@ def parse_and_inflect_collocations(word_tokens):
                 p1_normal = morph.parse(p1.normal_form)[0]
                 gender1 = p1_normal.tag.gender  # род
                 number1 = p1_normal.tag.number  # число
-                case1 = 'nomn'  # падеж
+                case1 = p1_normal.tag.case  # падеж
                 if pos2 == 'ADJF':
                     (word2, error) = try_inflect_word(p2, gender1, number1, case1)
                     collocations_tokens.append(word2 + ' ' + (p1.word if error else p1_normal.word))
