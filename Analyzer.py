@@ -104,7 +104,8 @@ def definition_processing(text):
             type1Condition = ((localToken == '—' or localToken == '–') and (word_tokens[pos-1] not in punctuation)) if pos != sentencesPositions[i]+1 else False
             type2Condition = (localToken == 'это' and (word_tokens[pos-1] == '—' or word_tokens[pos-1] == '–')) if pos != sentencesPositions[i]+1 else False
             type3Condition = (localToken == 'понимается' and (word_tokens[pos-2] == 'под' or word_tokens[pos-3] == 'под')) if pos != sentencesPositions[i]+3 else False
-            if type1Condition or type2Condition or type3Condition:
+            lengthCondition = (sentencesPositions[i+1] - pos > 2 and sentencesPositions[i+1] - sentencesPositions[i] < 40)
+            if (type1Condition or type2Condition or type3Condition) and lengthCondition:
                 localDefinition = ''
                 for index in range(sentencesPositions[i]+1, sentencesPositions[i+1]):
                     localDefinition += word_tokens[index]
