@@ -78,41 +78,66 @@ def words_processing(text):
 
 # Определения
 def definition_processing(text):
-    punctuation = """!"#$%&'()*+,./:;<=>?@[\]^_`{|}~«»"""
+    # punctuation = """!"#$%&'()*+,./:;<=>?@[\]^_`{|}~«»"""
     # punctuation = """!"#$%&'*+,./:;<=>?@[\]^_`{|}~«»"""
-    text = text.lower()
+    # text = text.lower()
+    # text = re.sub(r'[\(\[].*?[\)\]]', r'', text)
     # text = remove_units(text)
-    text = text.replace('—', '—' + ' ', text.count('—'))
-    text = text.replace('–', '–' + ' ', text.count('–'))
-    for char in punctuation:
-        text = text.replace(char, char + ' ', text.count(char))
-    word_tokens = word_tokenize(text, 'russian')
-    definitions = list()
-    position = 0
-    sentencesPositions = []
-    sentencesPositions.append(-1)
-    for token in word_tokens:
-        if token == '.':
-            sentencesPositions.append(position)
-        position += 1
-    sentencesCount = len(sentencesPositions)
+    # text = text.replace('—', '—' + ' ', text.count('—'))
+    # text = text.replace('–', '–' + ' ', text.count('–'))
+    # for char in punctuation:
+    #     text = text.replace(char, char + ' ', text.count(char))
+    # word_tokens = word_tokenize(text, 'russian')
+    # definitions = list()
+    # position = 0
+    # sentencesPositions = []
+    # sentencesPositions.append(-1)
+    # for token in word_tokens:
+    #     if token == '.':
+    #         sentencesPositions.append(position)
+    #     position += 1
+    # sentencesCount = len(sentencesPositions)
     # print(f'sentencesCount = {sentencesCount}')
-    for i in range(0, sentencesCount-1):
-        # print(f'{i}/{sentencesCount}')
-        for pos in range(sentencesPositions[i]+1, sentencesPositions[i+1]):
-            localToken = word_tokens[pos]
-            type1Condition = ((localToken == '—' or localToken == '–') and (word_tokens[pos-1] not in punctuation)) if pos != sentencesPositions[i]+1 else False
-            type2Condition = (localToken == 'это' and (word_tokens[pos-1] == '—' or word_tokens[pos-1] == '–')) if pos != sentencesPositions[i]+1 else False
-            type3Condition = (localToken == 'понимается' and (word_tokens[pos-2] == 'под' or word_tokens[pos-3] == 'под')) if pos != sentencesPositions[i]+3 else False
-            lengthCondition = (sentencesPositions[i+1] - pos > 2 and pos - sentencesPositions[i] > 1 and sentencesPositions[i+1] - sentencesPositions[i] < 40)
-            if (type1Condition or type2Condition or type3Condition) and lengthCondition:
-                localDefinition = ''
-                for index in range(sentencesPositions[i]+1, sentencesPositions[i+1]):
-                    localDefinition += word_tokens[index]
-                    if index != sentencesPositions[i+1] - 1:
-                        localDefinition += ' '
-                definitions.append(localDefinition)
-                break
+    # for i in range(0, sentencesCount-1):
+    #     print(f'{i}/{sentencesCount}')
+    #     for pos in range(sentencesPositions[i]+1, sentencesPositions[i+1]):
+    #         localToken = word_tokens[pos]
+    #         type1Condition = ((localToken == '—' or localToken == '–') and (word_tokens[pos-1] not in punctuation)) if pos != sentencesPositions[i]+1 else False
+    #         type2Condition = (localToken == 'это' and (word_tokens[pos-1] == '—' or word_tokens[pos-1] == '–')) if pos != sentencesPositions[i]+1 else False
+    #         type3Condition = (localToken == 'понимается' and (word_tokens[pos-2] == 'под' or word_tokens[pos-3] == 'под')) if pos != sentencesPositions[i]+3 else False
+    #         lengthCondition = (sentencesPositions[i+1] - pos > 2 and pos - sentencesPositions[i] > 1 and sentencesPositions[i+1] - sentencesPositions[i] < 40)
+    #         if (type1Condition or type2Condition or type3Condition) and lengthCondition:
+    #             localDefinition = ''
+    #             for index in range(sentencesPositions[i]+1, sentencesPositions[i+1]):
+    #                 localDefinition += word_tokens[index]
+    #                 if index != sentencesPositions[i+1] - 1:
+    #                     localDefinition += ' '
+    #             definitions.append(localDefinition)
+    #             break
+    text = re.sub(r'[\(\[].*?[\)\]]', r'', text)
+    punctuation = """!"#$%&'()*+,./:;<=>?@[\]^_`{|}~«»"""
+    definitions = list()
+    indexes = []
+    indexes.append(-2)
+    for i in range(len(text)-3):
+        substr = text[i:i+3]
+        if re.match(r'\.\s+[А-ЯA-Z]', substr):
+            indexes.append(i)
+    sentences = []
+    for i in range(len(indexes) - 1):
+        sentences.append(text[indexes[i] + 2:indexes[i + 1] + 1].lower())
+    for i in range(len(sentences)):
+        word_tokens = word_tokenize(sentences[i])
+        if (len(word_tokens) >= 5):
+            for pos in range(len(word_tokens)):
+                localToken = word_tokens[pos]
+                type1Condition = (localToken == '—' or localToken == '–') and ((word_tokens[pos - 1] not in punctuation) if pos >= 1 else False) and (min(pos, len(word_tokens) - pos) <= 2)
+                type2Condition = (localToken == 'это' and (word_tokens[pos - 1] == '—' or word_tokens[pos - 1] == '–')) if pos >= 1 else False
+                type3Condition = (localToken == 'понимается' and (word_tokens[pos - 2] == 'под' or word_tokens[pos - 3] == 'под')) if pos >= 3 else False
+                # lengthCondition = (len(word_tokens) - pos >= 2 and pos >= 1)# and len(word_tokens) < 40)
+                if type1Condition or type2Condition or type3Condition:
+                    definitions.append(sentences[i])
+                    break
     print(GREEN + BOLD + 'Definitions: ' + END)
     for definition in definitions:
         print('\t>>> ', definition)
