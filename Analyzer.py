@@ -3,6 +3,7 @@ import nltk
 import os
 import re
 from nltk import word_tokenize
+from nltk.tokenize import sent_tokenize
 from nltk.probability import FreqDist
 from nltk.corpus import stopwords
 import pymorphy2  # морфологический анализатор https://pymorphy2.readthedocs.io/en/latest/user/index.html
@@ -26,8 +27,9 @@ def lemmatize_and_clean(word_tokens):
 
 
 def remove_unnecessary_symbols(text):
-    punctuation = """!"#$%&'()*+,./:;<=>?@[\]^_`{|}~""" + '\n\t\xa0'
-    return "".join([char for char in text if char not in punctuation])
+    punctuation = """!"#$%&'()*+,./:;<=>?@[\]«»^_`{|}~""" + '\n\t\xa0'
+    table = str.maketrans(dict.fromkeys(punctuation))
+    return text.translate(table)
 
 
 def remove_units(text):
@@ -44,6 +46,13 @@ def read_exclude_dict(filename):
     file.close()
     return dict_tokens
 
+
+def is_token_in_dict(token, dict):
+    stopwords = read_exclude_dict(dict)
+    for dict_word in stopwords:
+        if token.lower() == dict_word:
+            return True
+    return False
 
 # очистка текста от ненужных слов
 def remove_stopwords(word_tokens):
@@ -75,69 +84,112 @@ def words_processing(text):
         if (word[1] > 1):
             print('\t', word)
 
+def is_dash(token):
+    return token == '—' or token == '–'
+
+def is_comma(token):
+    return token == ','
+
+
+def is_word(token):
+    return len(re.sub(r'[A-Za-zА-Яа-я\-]+\.?', r'', token)) == 0
+
+
+def is_number(token):
+    return len(re.sub(r'[0-9]+', r'', token)) == 0
+
 
 # Определения
 def definition_processing(text):
-    # punctuation = """!"#$%&'()*+,./:;<=>?@[\]^_`{|}~«»"""
-    # punctuation = """!"#$%&'*+,./:;<=>?@[\]^_`{|}~«»"""
-    # text = text.lower()
-    # text = re.sub(r'[\(\[].*?[\)\]]', r'', text)
-    # text = remove_units(text)
-    # text = text.replace('—', '—' + ' ', text.count('—'))
-    # text = text.replace('–', '–' + ' ', text.count('–'))
-    # for char in punctuation:
-    #     text = text.replace(char, char + ' ', text.count(char))
-    # word_tokens = word_tokenize(text, 'russian')
-    # definitions = list()
-    # position = 0
-    # sentencesPositions = []
-    # sentencesPositions.append(-1)
-    # for token in word_tokens:
-    #     if token == '.':
-    #         sentencesPositions.append(position)
-    #     position += 1
-    # sentencesCount = len(sentencesPositions)
-    # print(f'sentencesCount = {sentencesCount}')
-    # for i in range(0, sentencesCount-1):
-    #     print(f'{i}/{sentencesCount}')
-    #     for pos in range(sentencesPositions[i]+1, sentencesPositions[i+1]):
-    #         localToken = word_tokens[pos]
-    #         type1Condition = ((localToken == '—' or localToken == '–') and (word_tokens[pos-1] not in punctuation)) if pos != sentencesPositions[i]+1 else False
-    #         type2Condition = (localToken == 'это' and (word_tokens[pos-1] == '—' or word_tokens[pos-1] == '–')) if pos != sentencesPositions[i]+1 else False
-    #         type3Condition = (localToken == 'понимается' and (word_tokens[pos-2] == 'под' or word_tokens[pos-3] == 'под')) if pos != sentencesPositions[i]+3 else False
-    #         lengthCondition = (sentencesPositions[i+1] - pos > 2 and pos - sentencesPositions[i] > 1 and sentencesPositions[i+1] - sentencesPositions[i] < 40)
-    #         if (type1Condition or type2Condition or type3Condition) and lengthCondition:
-    #             localDefinition = ''
-    #             for index in range(sentencesPositions[i]+1, sentencesPositions[i+1]):
-    #                 localDefinition += word_tokens[index]
-    #                 if index != sentencesPositions[i+1] - 1:
-    #                     localDefinition += ' '
-    #             definitions.append(localDefinition)
-    #             break
-    text = re.sub(r'[\(\[].*?[\)\]]', r'', text)
-    punctuation = """!"#$%&'()*+,./:;<=>?@[\]^_`{|}~«»"""
-    definitions = list()
-    indexes = []
-    indexes.append(-2)
-    for i in range(len(text)-3):
-        substr = text[i:i+3]
-        if re.match(r'\.\s+[А-ЯA-Z]', substr):
-            indexes.append(i)
-    sentences = []
-    for i in range(len(indexes) - 1):
-        sentences.append(text[indexes[i] + 2:indexes[i + 1] + 1].lower())
-    for i in range(len(sentences)):
-        word_tokens = word_tokenize(sentences[i])
-        if (len(word_tokens) >= 5):
-            for pos in range(len(word_tokens)):
-                localToken = word_tokens[pos]
-                type1Condition = (localToken == '—' or localToken == '–') and ((word_tokens[pos - 1] not in punctuation) if pos >= 1 else False) and (min(pos, len(word_tokens) - pos) <= 2)
-                type2Condition = (localToken == 'это' and (word_tokens[pos - 1] == '—' or word_tokens[pos - 1] == '–')) if pos >= 1 else False
-                type3Condition = (localToken == 'понимается' and (word_tokens[pos - 2] == 'под' or word_tokens[pos - 3] == 'под')) if pos >= 3 else False
-                # lengthCondition = (len(word_tokens) - pos >= 2 and pos >= 1)# and len(word_tokens) < 40)
-                if type1Condition or type2Condition or type3Condition:
-                    definitions.append(sentences[i])
-                    break
+    definitions = []
+
+    # разделяем текст на предложения предложения
+    sentences = sent_tokenize(text, 'russian')
+    # for s in sentences:
+    #     print('sentence: ' + s)
+
+    for original_sentence in sentences:
+        sentence = re.sub(r'[\(\[].*?[\)\]]', r'', original_sentence)
+
+        word_tokens = word_tokenize(sentence)
+        tokens_count = len(word_tokens)
+
+        word_tokens_without_punct = word_tokenize(remove_unnecessary_symbols(sentence))
+        tokens_without_punct_count = len(word_tokens_without_punct)
+        if (tokens_count >= 5):
+
+            # конструкции определений
+            #   1) [1-2 слова] [-] [N слов]
+            #   2) [N слов] [-] [1-2 слова]
+            #       возможно исключаем слова начинающиеся с большой буквы (но вообще это ошибка в тексте)
+            #   3) [1-3 слова КАПСОМ] [,]|[-] [N слов]
+            #   4) [под] [N слов] [понимается] [N слов]
+
+            is_definition = False
+
+            # case 1) [1-2 слова] [-] [N слов]
+            for i in range(tokens_without_punct_count):
+                current_token = word_tokens_without_punct[i]
+                next_token = word_tokens_without_punct[i+1] if i < tokens_without_punct_count - 1 else ''
+                if (is_dash(current_token) and
+                    1 <= i <= 2 and
+                    not is_token_in_dict(word_tokens_without_punct[i-1], 'exclude_from_definitions.txt') and
+                    not is_number(next_token)):
+
+                    if tokens_without_punct_count - i >= 4 and (
+                            is_dash(word_tokens_without_punct[i+3]) or
+                            is_dash(word_tokens_without_punct[i+4])):
+                        continue
+                    else:
+                        is_definition = True
+                        break
+
+
+            # case 2) [N слов] [-] [1-2 слова]
+            if not is_definition:
+                reversed_tokens = word_tokens[::-1]  # reverse list
+                for i in range(tokens_count):
+                    current_token = reversed_tokens[i]
+                    next_token = reversed_tokens[i+1] if i < tokens_count - 1 else ''
+                    if (is_dash(current_token) and
+                        1 <= i <= 2 and
+                        not is_number(next_token)): # and not (len(next_token) > 0 and next_token[0].isupper())
+
+                        is_definition = True
+                        break
+
+
+            # case 3) [1-3 слова КАПСОМ] [,]|[-] [N слов]
+            if not is_definition:
+                for i in range(tokens_count):
+                    current_token = word_tokens[i]
+                    next_token = word_tokens[i+1] if i < tokens_count - 1 else ''
+                    if ((is_dash(current_token) or is_comma(current_token)) and
+                        1 <= i <= 3 and
+                        not is_number(next_token)):
+
+                        is_upper = True
+                        for k in range(i):
+                            if not word_tokens[k].isupper():
+                                is_upper = False
+
+                        if is_upper:
+                            is_definition = True
+                            break
+
+
+            # 4) [под] [N слов] [понимается] [N слов]
+            if not is_definition and word_tokens[0].lower() == 'под':
+                for i in range(1, tokens_count):
+                    current_token = word_tokens[i]
+                    if morph.parse(current_token.lower())[0].normal_form == 'пониматься' and i <= 5:
+                        is_definition = True
+                        break
+
+
+            if is_definition:
+                definitions.append(original_sentence)
+
     print(GREEN + BOLD + 'Definitions: ' + END)
     for definition in definitions:
         print('\t>>> ', definition)
@@ -206,12 +258,12 @@ def collocation_processing(text):
     word_tokens = word_tokenize(text, 'russian')
 
     # Словосочетания из 2-х слов - <сущ + прил> или <глаг + сущ>
-    # виды словосочетаний, которые не учитываем
+    # виды словосочетаний, которые НЕ учитываем
     #  NOUN + NOUN
     #  NUMR + NOUN
     #  VERB\INFN + ADVB\GRND
     #  GRND + NOUN/ADVB
-    #  PRTF/PRTS + зависимое слово?
+    #  PRTF/PRTS + зависимое слово
     collocations_tokens = parse_and_inflect_collocations(word_tokens)
 
     # результат
@@ -237,9 +289,9 @@ if __name__ == '__main__':
             print(f'{GREEN + BOLD}First 80 symbols{ END } = {text[:80]}...')
             print(f'{GREEN + BOLD}Characters count{ END } = {len(text)}')
 
-            words_processing(text)
+            # words_processing(text)
             definition_processing(text)
-            collocation_processing(text)
+            # collocation_processing(text)
 
             print(YELLOW + BOLD + '============================================================\n\n' + END)
             # break
