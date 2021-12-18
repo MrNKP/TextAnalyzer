@@ -131,7 +131,8 @@ def definition_processing(text):
             for i in range(tokens_without_punct_count):
                 current_token = word_tokens_without_punct[i]
                 next_token = word_tokens_without_punct[i+1] if i < tokens_without_punct_count - 1 else ''
-                if ((is_dash(current_token) or current_token.lower() == 'это') and
+                # ('-') или ('это' и нет знаков препинания перед)
+                if ((is_dash(current_token) or (current_token.lower() == 'это' and word_tokens_without_punct[i] == word_tokens[i])) and
                     1 <= i <= 2 and
                     not is_token_in_dict(word_tokens_without_punct[i-1], 'exclude_from_definitions.txt') and
                     not is_number(next_token)):
@@ -153,7 +154,7 @@ def definition_processing(text):
                     next_token = reversed_tokens[i+1] if i < tokens_count - 1 else ''
                     if (is_dash(current_token) and
                         1 <= i <= 2 and
-                        not is_number(next_token)): # and not (len(next_token) > 0 and next_token[0].isupper())
+                        not is_number(next_token)) and not (len(next_token) > 0 and next_token[0].isupper() and not next_token.isupper()):
 
                         is_definition = True
                         break
@@ -281,7 +282,7 @@ if __name__ == '__main__':
 
     # копаемся во всех файлах в папке resources
     for filename in os.listdir("./resources"):
-        if filename.endswith("custom_file.txt"):
+        if filename.endswith(".txt"):
             file = open('resources/' + filename, "r", encoding="utf-8")
             text = file.read()
             file.close()
