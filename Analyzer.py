@@ -119,19 +119,20 @@ def definition_processing(text):
         if (tokens_count >= 5):
 
             # конструкции определений
-            #   1) [1-2 слова] [-] [N слов]
+            #   1) [1-2 слова] [-]|[это] [N слов]
             #   2) [N слов] [-] [1-2 слова]
             #       возможно исключаем слова начинающиеся с большой буквы (но вообще это ошибка в тексте)
             #   3) [1-3 слова КАПСОМ] [,]|[-] [N слов]
             #   4) [под] [N слов] [понимается] [N слов]
+            #   5) [1-2 слова] [это] [N слов]
 
             is_definition = False
 
-            # case 1) [1-2 слова] [-] [N слов]
+            # case 1) [1-2 слова] [-]|[это] [N слов]
             for i in range(tokens_without_punct_count):
                 current_token = word_tokens_without_punct[i]
                 next_token = word_tokens_without_punct[i+1] if i < tokens_without_punct_count - 1 else ''
-                if (is_dash(current_token) and
+                if ((is_dash(current_token) or current_token.lower() == 'это') and
                     1 <= i <= 2 and
                     not is_token_in_dict(word_tokens_without_punct[i-1], 'exclude_from_definitions.txt') and
                     not is_number(next_token)):
@@ -281,7 +282,7 @@ if __name__ == '__main__':
 
     # копаемся во всех файлах в папке resources
     for filename in os.listdir("./resources"):
-        if filename.endswith(".txt"):
+        if filename.endswith("custom_file.txt"):
             file = open('resources/' + filename, "r", encoding="utf-8")
             text = file.read()
             file.close()
@@ -289,9 +290,9 @@ if __name__ == '__main__':
             print(f'{GREEN + BOLD}First 80 symbols{ END } = {text[:80]}...')
             print(f'{GREEN + BOLD}Characters count{ END } = {len(text)}')
 
-            # words_processing(text)
+            words_processing(text)
             definition_processing(text)
-            # collocation_processing(text)
+            collocation_processing(text)
 
             print(YELLOW + BOLD + '============================================================\n\n' + END)
             # break
